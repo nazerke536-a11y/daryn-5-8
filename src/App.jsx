@@ -1862,6 +1862,9 @@ onClick={()=>setScreen({v:"lesson",topic:t})}>
 <button className="qa-btn qa-p" onClick={()=>setScreen({v:"mock"})}>📝 Мок-Олимпиада</button>
 <button className="qa-btn qa-s" onClick={()=>setScreen({v:"ai"})}>🤖 AI Мұғалім</button>
 </div>
+<div className="qa-row" style={{marginTop:0}}>
+<button className="qa-btn qa-prog" onClick={()=>setScreen({v:"progress"})}>📊 Менің Прогресім</button>
+</div>
 </div>
 );
 }
@@ -2458,11 +2461,112 @@ body{background:#f0f4ff;color:#1e2740;font-family:'DM Sans',sans-serif;min-heigh
 .ai-inp::placeholder{color:#cbd5e1;}
 .ai-send{padding:11px 18px;background:linear-gradient(135deg,#7c3aed,#a78bfa);border:none;border-radius:12px;color:#fff;font-weight:700;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;box-shadow:0 3px 12px rgba(124,58,237,.30);}
 .ai-send:disabled{opacity:.40;cursor:not-allowed;}
+.qa-prog{background:linear-gradient(135deg,#0891b2,#06b6d4);color:#fff;box-shadow:0 4px 16px rgba(8,145,178,.25);border:none;}
+.qa-prog:hover{box-shadow:0 6px 22px rgba(8,145,178,.35);transform:translateY(-1px);}
+
 `;
+
+// ─── PROGRESS TRACKER ────────────────────────────────────────
+function Progress({grade,setGrade,setScreen,scores,allScores}){
+const grades=[5,6,7,8];
+return(
+<div className="screen">
+<button className="back-btn" onClick={()=>setScreen({v:"home"})}>← Артқа</button>
+<div style={{padding:"16px 20px 8px"}}>
+<div style={{fontFamily:"'Playfair Display',serif",fontSize:22,color:"#1e2740",marginBottom:4}}>📊 Менің Прогресім</div>
+<div style={{fontSize:12,color:"#94a3b8"}}>Барлық сыныптар бойынша нәтижелер</div>
+</div>
+{grades.map(g=>{
+const cur=CURRICULUM[g];
+const gScores=allScores[g]||{};
+const total=cur.topics.reduce((s,t)=>s+(gScores[t.id]?.total||0),0);
+const corr=cur.topics.reduce((s,t)=>s+(gScores[t.id]?.correct||0),0);
+const done=cur.topics.filter(t=>gScores[t.id]).length;
+const pct=total>0?Math.round(corr/total*100):0;
+const m=pct>=90?"🥇":pct>=75?"🥈":pct>=55?"🥉":"📚";
+return(
+<div key={g} style={{margin:"0 16px 12px",background:"#fff",borderRadius:18,padding:"16px",boxShadow:"0 2px 12px rgba(0,0,0,.07)",border:"2px solid #e2e8f0"}}>
+<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+<div style={{fontFamily:"'Playfair Display',serif",fontSize:17,color:"#1e2740"}}>{g}-сынып</div>
+<div style={{display:"flex",alignItems:"center",gap:8}}>
+<span style={{fontSize:20}}>{m}</span>
+<span style={{fontWeight:700,fontSize:18,color:pct>=75?"#15803d":pct>=55?"#d97706":"#94a3b8"}}>{pct}%</span>
+</div>
+</div>
+<div style={{height:8,background:"#f1f5f9",borderRadius:4,overflow:"hidden",marginBottom:8}}>
+<div style={{height:"100%",borderRadius:4,background:pct>=75?"#22c55e":pct>=55?"#f59e0b":"#e2e8f0",width:`${pct}%`,transition:"width .4s"}}/>
+</div>
+<div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:"#94a3b8",marginBottom:10}}>
+<span>{done}/{cur.topics.length} тақырып</span>
+<span>{corr}/{total} дұрыс</span>
+</div>
+<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+{cur.topics.map(t=>{
+const sc=gScores[t.id];
+const tpct=sc?Math.round(sc.correct/sc.total*100):0;
+return(
+<div key={t.id} style={{background:sc?"#f0fdf4":"#f8fafc",border:`1.5px solid ${sc?"#86efac":"#e2e8f0"}`,borderRadius:10,padding:"8px 10px",cursor:"pointer"}}
+onClick={()=>{setGrade(g);setScreen({v:"lesson",topic:t});}}>
+<div style={{fontSize:11,fontWeight:700,color:sc?"#15803d":"#94a3b8",marginBottom:2}}>{t.icon} {t.title}</div>
+<div style={{fontSize:10,color:sc?"#16a34a":"#cbd5e1"}}>{sc?`${tpct}% (${sc.correct}/${sc.total})`:"Жаттықпаған"}</div>
+</div>
+);
+})}
+</div>
+</div>
+);
+})}
+<div style={{padding:"0 16px 30px"}}>
+<div style={{background:"#f5f3ff",border:"2px solid #ddd6fe",borderRadius:16,padding:"16px"}}>
+<div style={{fontWeight:700,color:"#7c3aed",marginBottom:8,fontSize:13}}>🎯 Daryn Олимпиада дайындығы деңгейі</div>
+{(()=>{
+const allT=grades.flatMap(g=>CURRICULUM[g].topics);
+const allDone=allT.filter(t=>(allScores[t.grade]||allScores[grades.find(g=>CURRICULUM[g].topics.some(tt=>tt.id===t.id))]||{})[t.id]);
+const totalQ=allT.reduce((s,t)=>s+t.questions.length,0);
+const totalCorr=grades.reduce((s,g)=>{
+const gs=allScores[g]||{};
+return s+CURRICULUM[g].topics.reduce((ts,t)=>ts+(gs[t.id]?.correct||0),0);
+},0);
+const totalAns=grades.reduce((s,g)=>{
+const gs=allScores[g]||{};
+return s+CURRICULUM[g].topics.reduce((ts,t)=>ts+(gs[t.id]?.total||0),0);
+},0);
+const ovPct=totalAns>0?Math.round(totalCorr/totalAns*100):0;
+return(
+<div>
+<div style={{fontSize:28,fontFamily:"'Playfair Display',serif",color:"#7c3aed",fontWeight:700}}>{ovPct}%</div>
+<div style={{fontSize:12,color:"#6b7a99",marginTop:4}}>Жалпы нәтиже · {totalCorr}/{totalAns} дұрыс жауап</div>
+<div style={{fontSize:12,color:"#7c3aed",marginTop:6,fontWeight:600}}>
+{ovPct>=90?"🥇 Республикалық кезеңге дайынсыз!":ovPct>=75?"🥈 Облыстық кезеңге дайынсыз!":ovPct>=55?"🥉 Аудандық кезеңге дайынсыз!":"📚 Дайындықты жалғастырыңыз!"}
+</div>
+</div>
+);
+})()}
+</div>
+</div>
+</div>
+);
+}
+
 export default function App(){
 const [screen, setScreen] = useState({v:"home"});
 const [grade,  setGrade]  = useState(7);
-const [scores, setScores] = useState({});
+const [allScores, setAllScores] = useState({5:{},6:{},7:{},8:{}});
+const scores = allScores[grade]||{};
+function setScores(fn){
+setAllScores(prev=>{
+const cur=prev[grade]||{};
+const next=typeof fn==="function"?fn(cur):fn;
+return {...prev,[grade]:next};
+});
+}
+useEffect(()=>{
+const saved=localStorage.getItem("daryn_scores");
+if(saved) try{setAllScores(JSON.parse(saved));}catch(e){}
+},[]);
+useEffect(()=>{
+localStorage.setItem("daryn_scores",JSON.stringify(allScores));
+},[allScores]);
 useEffect(()=>{
 const el = document.createElement("style");
 el.textContent = STYLES;
@@ -2471,10 +2575,11 @@ return ()=>document.head.removeChild(el);
 },[]);
 return(
 <div className="app">
-{screen.v==="home"   && <Home   grade={grade} setGrade={setGrade} setScreen={setScreen} scores={scores}/>}
-{screen.v==="lesson" && <Lesson topic={screen.topic} setScreen={setScreen} setScores={setScores}/>}
-{screen.v==="mock"   && <Mock   grade={grade} setScreen={setScreen}/>}
-{screen.v==="ai"     && <AIScreen grade={grade} setScreen={setScreen}/>}
+{screen.v==="home"     && <Home grade={grade} setGrade={setGrade} setScreen={setScreen} scores={scores}/>}
+{screen.v==="lesson"   && <Lesson topic={screen.topic} setScreen={setScreen} setScores={setScores}/>}
+{screen.v==="mock"     && <Mock grade={grade} setScreen={setScreen}/>}
+{screen.v==="ai"       && <AIScreen grade={grade} setScreen={setScreen}/>}
+{screen.v==="progress" && <Progress grade={grade} setGrade={setGrade} setScreen={setScreen} scores={scores} allScores={allScores}/>}
 </div>
 );
 }
